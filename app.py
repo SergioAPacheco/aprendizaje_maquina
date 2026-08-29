@@ -4,23 +4,100 @@
 Aplicación Streamlit del Proyecto Integrador de Minería de Datos, UPB 2026.
 
 Captura las características de un beneficiario, reconstruye el vector de entrada
-con las mismas transformaciones del entrenamiento y devuelve la predicción.
+con las mismas transformaciones del entrenamiento y devuelve la probabilidad de
+que culmine su programa académico.
 
 Ejecutar con:  streamlit run app.py
 """
 
-#Cargamos librerías principales
+import pickle
+
 import numpy as np
 import pandas as pd
 import streamlit as st
-from xgboost import XGBClassifier
+
+st.set_page_config(
+    page_title="Predicción de graduación · Becas Antioquia",
+    page_icon="🎓",
+    layout="wide",
+)
+
+# ----------------------------------------------------------------- estilos
+st.markdown("""
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&display=swap');
+
+  :root {
+      --tinta:    #16232b;
+      --tinta-2:  #4a5b66;
+      --tenue:    #7b8a94;
+      --borde:    #dde4e8;
+      --fondo-2:  #f4f7f8;
+      --acento:   #1d6b73;
+      --ok:       #2f6f4e;
+      --alerta:   #9a6b12;
+      --riesgo:   #a8362b;
+  }
+
+  html, body, [class*="css"] { font-family: 'Source Sans 3', system-ui, sans-serif; }
+  .block-container { padding-top: 2.2rem; max-width: 1180px; }
+
+  .cabecera { border-bottom: 2px solid var(--borde); padding-bottom: 1.1rem; margin-bottom: 1.6rem; }
+  .cabecera .sobre {
+      font-size: .72rem; letter-spacing: .14em; text-transform: uppercase;
+      color: var(--acento); font-weight: 600;
+  }
+  .cabecera h1 {
+      font-size: 1.9rem; font-weight: 700; color: var(--tinta);
+      margin: .25rem 0 .35rem; line-height: 1.15;
+  }
+  .cabecera p { color: var(--tinta-2); font-size: 1rem; margin: 0; max-width: 68ch; }
+
+  .grupo {
+      font-size: .74rem; letter-spacing: .1em; text-transform: uppercase;
+      color: var(--tenue); font-weight: 600;
+      border-bottom: 1px solid var(--borde); padding-bottom: .4rem; margin-bottom: .9rem;
+  }
+
+  .tarjeta {
+      border: 1px solid var(--borde); border-radius: 4px; background: #fff;
+      padding: 1.6rem 1.8rem; margin-top: .5rem;
+  }
+  .tarjeta.baja   { border-left: 4px solid var(--ok); }
+  .tarjeta.media  { border-left: 4px solid var(--alerta); }
+  .tarjeta.alta   { border-left: 4px solid var(--riesgo); }
+
+  .cifra { font-size: 3.4rem; font-weight: 700; line-height: 1; letter-spacing: -.02em; }
+  .cifra.baja { color: var(--ok); } .cifra.media { color: var(--alerta); } .cifra.alta { color: var(--riesgo); }
+  .cifra-pie { color: var(--tenue); font-size: .85rem; margin-top: .3rem; }
+
+  .banda { font-size: 1.05rem; font-weight: 700; color: var(--tinta); margin-bottom: .3rem; }
+  .accion { color: var(--tinta-2); font-size: .97rem; line-height: 1.55; }
+
+  .pista { position: relative; height: 10px; border-radius: 5px; margin: 1.4rem 0 .5rem;
+           background: linear-gradient(to right,
+              #d9a49d 0%, #d9a49d 35%, #e2c98c 35%, #e2c98c 65%, #8fbfa4 65%, #8fbfa4 100%); }
+  .marca { position: absolute; top: -5px; width: 3px; height: 20px;
+           background: var(--tinta); border-radius: 2px; }
+  .escala { display: flex; justify-content: space-between; font-size: .73rem; color: var(--tenue); }
+
+  .aviso { color: var(--tenue); font-size: .84rem; line-height: 1.5;
+           border-top: 1px solid var(--borde); margin-top: 1.4rem; padding-top: .9rem; }
+
+  div[data-testid="stForm"] { border: 1px solid var(--borde); border-radius: 4px; padding: 1.6rem 1.8rem; }
+  div[data-testid="stFormSubmitButton"] button {
+      background: var(--acento); color: #fff; border: none; font-weight: 600;
+      padding: .6rem 0; border-radius: 3px;
+  }
+  div[data-testid="stFormSubmitButton"] button:hover { background: #17565c; color: #fff; }
+  section[data-testid="stSidebar"] { background: var(--fondo-2); border-right: 1px solid var(--borde); }
+</style>
+""", unsafe_allow_html=True)
 
 
-#Cargamos el modelo
+# ------------------------------------------------------------------ modelo
 # El orden de la lista es el contrato con el cuaderno de clasificación, que la
 # serializa como [modelo, label_encoder, variables, scaler].
-import pickle
-
 @st.cache_resource
 def cargar_modelo(ruta='modelo-clasificacion.pkl'):
     with open(ruta, 'rb') as f:
@@ -28,6 +105,8 @@ def cargar_modelo(ruta='modelo-clasificacion.pkl'):
 
 modelo, label_encoder, variables, min_max_scaler = cargar_modelo()
 
+
+# ------------------------------------------------------------- catálogos
 programas_cursados_lista = ['ADMINISTRACION DE EMPRESAS',
  'ADMINISTRACION DE EMPRESAS AGROPECUARIAS',
  'ADMINISTRACION DE EMPRESAS TURISTICAS Y HOTELERAS',
@@ -204,21 +283,16 @@ programas_cursados_lista = ['ADMINISTRACION DE EMPRESAS',
  'TRABAJO SOCIAL',
  'ZOOTECNIA']
 
-#Interfaz Grafica
-#Se crea interfaz gráfica con streamlit para captura de los datos
-
-st.set_page_config(page_title="Predicción de Graduación de Becas", page_icon="🎓", layout="wide")
-st.title('Información para Predicción')
-# 1. VECTORES DE VALORES ÚNICOS
 v_semestre = [1, 2]
 v_beneficio = ['MATRICULA', 'MATRICULA Y SOSTENIMIENTO', 'SOSTENIMIENTO']
 v_genero = ['FEMENINO', 'MASCULINO']
 v_estrato = ['ESTRATO 1', 'ESTRATO 2', 'ESTRATO 3', 'ESTRATO 4', 'ESTRATO 5']
 v_etnia = ['AFROCOLOMBIANO', 'INDIGENA', 'NINGUNO']
 v_victima = ['NO', 'SI']
-v_subregiones = ['BAJO CAUCA', 'MAGDALENA MEDIO', 'NORDESTE', 'NORTE', 'OCCIDENTE', 'ORIENTE', 'SUROESTE', 'URABA', 'VALLE DE ABURRA']
+v_subregiones = ['BAJO CAUCA', 'MAGDALENA MEDIO', 'NORDESTE', 'NORTE', 'OCCIDENTE',
+                 'ORIENTE', 'SUROESTE', 'URABA', 'VALLE DE ABURRA']
 v_programas_cursados = programas_cursados_lista
-v_universidades =['COLEGIO MAYOR DE ANTIOQUIA',
+v_universidades = ['COLEGIO MAYOR DE ANTIOQUIA',
  'COREDI',
  'CORPORACION UNIVERSITARIA MINUTO DE DIOS -UNIMINUTO-',
  'CORPORACION UNIVERSITARIA REMINGTON',
@@ -262,90 +336,160 @@ v_formacion = ['NORMALISTA', 'POSTGRADO', 'TECNICA PROFESIONAL', 'TECNOLOGICA', 
 v_movilidad = [False, True]
 v_am = ['NO', 'SI']
 v_am_oferta = ['NO', 'SI']
-# 2. INTERFAZ DE USUARIO (WIDGETS)
-col1, col2 = st.columns(2)
 
-with col1:
-    st.subheader("Filtros Personales")
-    edad = st.slider('Edad', 13, 70, 20)
-    genero = st.selectbox('Género', v_genero)
-    estrato = st.selectbox('Estrato', v_estrato)
-    etnia = st.selectbox('Grupo Étnico', v_etnia,
-                         help="Pertenencia o autorreconocimiento en grupos étnicos específicos.")
-    victima = st.selectbox('¿Es víctima del conflicto?', v_victima)
-    movilidad = st.selectbox('Se desplaza de su lugar de nacimiento?', v_movilidad,
-                             help="Indica si el estudiante reside en una ciudad distinta a la de su origen (movilidad territorial).")
-    subregiones = st.selectbox('¿En cual subregion vive?', v_subregiones,
-                                 help="Indica si el lugar de residencia actual pertenece al núcleo urbano del Área Metropolitana.")
-    residencia_am = st.selectbox('¿Reside en Área Metropolitana?', v_am,
-                                 help="Indica si el lugar de residencia actual pertenece al núcleo urbano del Área Metropolitana.")
-
-with col2:
-    st.subheader("Filtros Académicos")
-    semestre = st.selectbox('Semestre Convocatoria', v_semestre,
-                        help="Semestre académico en el cual el estudiante aplicó al beneficio.")
-    beneficio = st.selectbox('Beneficio', v_beneficio,
-                             help="Tipo de apoyo recibido (ej. pago de matrícula o sostenimiento).")
-    tipo_formacion = st.selectbox('Tipo de Formación', v_formacion, help="Indica el nivel educativo previo del estudiante.")
-    universidad = st.selectbox('Universidad', v_universidades)
-    programas_cursados = st.selectbox('Seleccion el programa que va a cursar en la universidad', v_programas_cursados)
-    am_oferta = st.selectbox('¿La oferta es dentro del Área Metropolitana?', v_am_oferta,
-                                 help="Indica si el lugar donde cursará el programa se encuentra Medellin, Barbosa, Girardota, Copacabana, Bello, Envigado, Itagüí, Sabaneta, La Estrella o Caldas.")
+AREA_METROPOLITANA = ("Medellín, Barbosa, Girardota, Copacabana, Bello, Envigado, "
+                      "Itagüí, Sabaneta, La Estrella o Caldas.")
 
 
-st.divider()
-#Dataframe
-# Crear un diccionario con los nombres de las columnas del CSV original
-input_data = {
-    'SEMESTRE DE CONVOCATORIA': semestre,
-    'BENEFICIO OTORGADO': beneficio,
-    'GENERO': genero,
-    'ESTRATO': estrato,
-    'GRUPO ETNICO': etnia,
-    'VICTIMA DEL CONFLICTO ARMADO': victima,
-    'UNIVERSIDAD': universidad,
-    'TIPO DE FORMACION': tipo_formacion,
-    'edad_beneficiario': edad,
-    'movilidad_territorial': movilidad,
-    'Municipio_Residencia_Area_metropolitana': residencia_am,
-    'SUBREGION DE RESIDENCIA' : subregiones,
-    'PROGRAMA CURSADO' : programas_cursados,
-    'Municipio_Oferta_Area_metropolitana' : am_oferta
-}
+# ----------------------------------------------------------- barra lateral
+with st.sidebar:
+    st.markdown("#### El modelo")
+    st.caption("Votación blanda sobre cinco familias: regresión logística, SVM, "
+               "red neuronal, Random Forest y XGBoost.")
+    izq, der = st.columns(2)
+    izq.metric("Exactitud", "72,1 %")
+    der.metric("AUC-ROC", "0,795")
 
-# Convertir a DataFrame
-data = pd.DataFrame([input_data])
+    with st.expander("Cómo leer el resultado"):
+        st.markdown(
+            "El modelo devuelve una **probabilidad**, no una sentencia. Se equivoca "
+            "en el 27,9 % de los casos, así que sirve para **priorizar acompañamiento**, "
+            "no para negar, condicionar o retirar un beneficio."
+        )
 
-#Se realiza la preparación
-data_preparada=data.copy()
+    with st.expander("Limitaciones"):
+        st.markdown(
+            "**Etiqueta censurada en el tiempo.** La tasa de graduación pasa de 67,9 % "
+            "en la convocatoria de 2013 a 0 % en las de 2023 y 2024: quien recibió el "
+            "apoyo hace poco no ha tenido tiempo de graduarse. Parte de lo que el modelo "
+            "lee como riesgo es antigüedad de la cohorte.\n\n"
+            "**Variables sensibles.** Género, estrato, grupo étnico y condición de víctima "
+            "entran al modelo, y las tasas difieren de forma marcada entre grupos.\n\n"
+            "**Sin grupo de comparación.** Los datos solo contienen beneficiarios, así que "
+            "no puede estimarse el efecto del auxilio."
+        )
 
-data_preparada[['edad_beneficiario']]= min_max_scaler.transform(data_preparada[['edad_beneficiario']])
+    st.caption("Datos: Corporación Gilberto Echeverri Mejía · 14.552 beneficiarios · "
+               "Datos Abiertos Colombia.")
 
-#En despliegue drop_first= False
-data_preparada = pd.get_dummies(data_preparada, columns=['PROGRAMA CURSADO','SUBREGION DE RESIDENCIA','BENEFICIO OTORGADO','ESTRATO','TIPO DE FORMACION','SEMESTRE DE CONVOCATORIA', 'GENERO', 'movilidad_territorial', 'VICTIMA DEL CONFLICTO ARMADO','GRUPO ETNICO','UNIVERSIDAD','Municipio_Residencia_Area_metropolitana','Municipio_Oferta_Area_metropolitana'], drop_first=False, dtype=int)
 
-#Se adicionan las columnas faltantes
-data_preparada=data_preparada.reindex(columns=variables,fill_value=0)
+# --------------------------------------------------------------- cabecera
+st.markdown("""
+<div class="cabecera">
+  <div class="sobre">Minería de datos · UPB 2026</div>
+  <h1>Riesgo de no graduación en beneficiarios de apoyos económicos</h1>
+  <p>Estima la probabilidad de que un beneficiario de beca o crédito condonable
+     en Antioquia culmine su programa académico, para priorizar acompañamiento
+     temprano.</p>
+</div>
+""", unsafe_allow_html=True)
 
-"""# Prediciones"""
 
-# Hacemos la predicción
-Y_pred = modelo.predict(data_preparada)
+# -------------------------------------------------------------- formulario
+with st.form("prediccion"):
+    izquierda, derecha = st.columns(2, gap="large")
 
-# Tomamos el primer resultado (índice 0)
-resultado = Y_pred[0]
+    with izquierda:
+        st.markdown('<div class="grupo">Perfil de la persona</div>', unsafe_allow_html=True)
+        edad = st.slider('Edad al momento de la convocatoria', 13, 70, 20)
+        genero = st.selectbox('Género', v_genero)
+        estrato = st.selectbox('Estrato socioeconómico', v_estrato,
+                               help="Estrato de la vivienda. Los datos solo contienen del 1 al 5.")
+        etnia = st.selectbox('Grupo étnico', v_etnia,
+                             help="Autorreconocimiento étnico declarado en la inscripción.")
+        victima = st.selectbox('¿Es víctima del conflicto armado?', v_victima)
+        movilidad = st.selectbox('¿Reside fuera de su departamento de nacimiento?', v_movilidad,
+                                 help="Movilidad territorial: indica desarraigo respecto del "
+                                      "departamento de origen.")
+        subregiones = st.selectbox('Subregión de residencia', v_subregiones,
+                                   help="Una de las nueve subregiones de Antioquia.")
+        residencia_am = st.selectbox('¿Reside en el Área Metropolitana?', v_am,
+                                     help="Municipios del Valle de Aburrá: " + AREA_METROPOLITANA)
 
-st.subheader("Resultado de la Predicción:")
-if resultado == 1:
-    st.success("🎓 **¡Felicidades!** Es probable que el estudiante se gradúe.")
+    with derecha:
+        st.markdown('<div class="grupo">Contexto académico</div>', unsafe_allow_html=True)
+        semestre = st.selectbox('Semestre de la convocatoria', v_semestre,
+                                help="Ciclo académico en el que aplicó al beneficio.")
+        beneficio = st.selectbox('Beneficio otorgado', v_beneficio,
+                                 help="Matrícula, sostenimiento o ambos.")
+        tipo_formacion = st.selectbox('Tipo de formación', v_formacion,
+                                      help="Nivel del programa que va a cursar.")
+        universidad = st.selectbox('Institución de educación superior', v_universidades)
+        programas_cursados = st.selectbox('Programa académico', v_programas_cursados)
+        am_oferta = st.selectbox('¿El programa se oferta en el Área Metropolitana?', v_am_oferta,
+                                 help="Municipio donde se dicta el programa: " + AREA_METROPOLITANA)
+
+    st.write("")
+    enviar = st.form_submit_button("Calcular probabilidad", use_container_width=True)
+
+
+# --------------------------------------------------------------- resultado
+if enviar:
+    # Diccionario con los nombres de las columnas del CSV original
+    input_data = {
+        'SEMESTRE DE CONVOCATORIA': semestre,
+        'BENEFICIO OTORGADO': beneficio,
+        'GENERO': genero,
+        'ESTRATO': estrato,
+        'GRUPO ETNICO': etnia,
+        'VICTIMA DEL CONFLICTO ARMADO': victima,
+        'UNIVERSIDAD': universidad,
+        'TIPO DE FORMACION': tipo_formacion,
+        'edad_beneficiario': edad,
+        'movilidad_territorial': movilidad,
+        'Municipio_Residencia_Area_metropolitana': residencia_am,
+        'SUBREGION DE RESIDENCIA': subregiones,
+        'PROGRAMA CURSADO': programas_cursados,
+        'Municipio_Oferta_Area_metropolitana': am_oferta
+    }
+    data = pd.DataFrame([input_data])
+
+    # Se replica la preparación del entrenamiento. En despliegue drop_first=False:
+    # se generan todos los niveles y el reindex se queda con las 247 columnas del
+    # modelo, descartando los niveles de referencia que allá se habían eliminado.
+    data_preparada = data.copy()
+    data_preparada[['edad_beneficiario']] = min_max_scaler.transform(
+        data_preparada[['edad_beneficiario']])
+    data_preparada = pd.get_dummies(
+        data_preparada,
+        columns=['PROGRAMA CURSADO', 'SUBREGION DE RESIDENCIA', 'BENEFICIO OTORGADO',
+                 'ESTRATO', 'TIPO DE FORMACION', 'SEMESTRE DE CONVOCATORIA', 'GENERO',
+                 'movilidad_territorial', 'VICTIMA DEL CONFLICTO ARMADO', 'GRUPO ETNICO',
+                 'UNIVERSIDAD', 'Municipio_Residencia_Area_metropolitana',
+                 'Municipio_Oferta_Area_metropolitana'],
+        drop_first=False, dtype=int)
+    data_preparada = data_preparada.reindex(columns=variables, fill_value=0)
+
+    probabilidad = float(modelo.predict_proba(data_preparada)[0, 1])
+    porcentaje = probabilidad * 100
+
+    if probabilidad >= 0.65:
+        clase, banda = "baja", "Riesgo bajo"
+        accion = ("El perfil se parece al de quienes culminaron. Seguimiento estándar, "
+                  "sin medidas adicionales.")
+    elif probabilidad >= 0.35:
+        clase, banda = "media", "Zona de incertidumbre"
+        accion = ("El modelo no discrimina bien en este rango: su predicción aquí es poco "
+                  "informativa. Conviene decidir con criterio humano y con información "
+                  "que el modelo no ve.")
+    else:
+        clase, banda = "alta", "Riesgo alto"
+        accion = ("El perfil se parece al de quienes no culminaron. Priorizar acompañamiento "
+                  "académico y seguimiento desde el primer semestre.")
+
+    st.markdown(f"""
+    <div class="tarjeta {clase}">
+      <div class="banda">{banda}</div>
+      <div class="cifra {clase}">{porcentaje:.1f} %</div>
+      <div class="cifra-pie">probabilidad estimada de culminar el programa</div>
+      <div class="pista"><div class="marca" style="left: calc({porcentaje:.1f}% - 1.5px);"></div></div>
+      <div class="escala"><span>0 % · riesgo alto</span><span>35 %</span><span>65 %</span><span>riesgo bajo · 100 %</span></div>
+      <div class="accion" style="margin-top:1.1rem;">{accion}</div>
+      <div class="aviso">El modelo acierta en el 72,1 % de los casos. Esta estimación
+        orienta la priorización de acompañamiento; no debe usarse para negar,
+        condicionar o retirar un beneficio.</div>
+    </div>
+    """, unsafe_allow_html=True)
+
 else:
-    st.error("⚠️ **Atención:** Según el modelo, el estudiante no se va a graduar.")
-
-# Recordar medida de error del modelo
-
-st.warning(
-    "El modelo se equivoca en el 27,9 % de los casos (exactitud del 72,1 % sobre el "
-    "conjunto de prueba). Esta herramienta está pensada para priorizar acompañamiento "
-    "y seguimiento, no para negar, condicionar o retirar un beneficio."
-)
-
+    st.info("Complete el perfil y pulse **Calcular probabilidad**.")
