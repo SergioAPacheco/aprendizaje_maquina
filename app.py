@@ -344,7 +344,7 @@ else:
 # Recordar medida de error del modelo
 
 st.warning(
-    "El modelo se equivoca en el 28,5 % de los casos (exactitud del 71,5 % sobre el "
+    "El modelo se equivoca en el 27,9 % de los casos (exactitud del 72,1 % sobre el "
     "conjunto de prueba). Esta herramienta está pensada para priorizar acompañamiento "
     "y seguimiento, no para negar, condicionar o retirar un beneficio."
 )

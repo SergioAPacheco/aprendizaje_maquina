@@ -33,7 +33,7 @@ equivalentes a 247 columnas después de la codificación.
 
 ## El modelo
 
-Se compararon diez clasificadores bajo un mismo protocolo: partición estratificada
+Se compararon once clasificadores bajo un mismo protocolo: partición estratificada
 70/30 con semilla fija, búsqueda de hiperparámetros por `GridSearchCV` con validación
 cruzada estratificada de 5 particiones sobre el conjunto de entrenamiento, y una
 única evaluación final sobre el conjunto de prueba.
@@ -42,7 +42,8 @@ Métrica de selección: **AUC-ROC**, con F1 macro como desempate.
 
 | Modelo | AUC-ROC (test) | F1 macro | Accuracy |
 |---|---|---|---|
-| **XGBoost** | **0,7948** | **0,7140** | **0,7146** |
+| **Votación (soft)** | **0,7954** | **0,7205** | **0,7206** |
+| XGBoost | 0,7929 | 0,7092 | 0,7098 |
 | Bagging con KNN | 0,7884 | 0,7131 | 0,7135 |
 | Red Neuronal (MLP) | 0,7858 | 0,7048 | 0,7050 |
 | Random Forest | 0,7833 | 0,7019 | 0,7022 |
@@ -51,11 +52,19 @@ Métrica de selección: **AUC-ROC**, con F1 macro como desempate.
 | KNN | 0,7700 | 0,6999 | 0,7002 |
 | AdaBoost | 0,7584 | 0,6875 | 0,6876 |
 | Árbol de Decisión | 0,7410 | 0,6605 | 0,6642 |
-| Baseline (Dummy) | 0,5000 | 0,3400 | 0,5100 |
+| Baseline (Dummy) | 0,5000 | 0,3373 | 0,5089 |
 
-**XGBoost** quedó seleccionado: `colsample_bytree=0.8`, `learning_rate=0.1`,
-`max_depth=7`, `n_estimators=200`, `subsample=0.8`. La coherencia entre validación
-cruzada (0,7978) y prueba (0,7948) indica que generaliza bien.
+El modelo desplegado es una **votación blanda** sobre cinco familias distintas:
+regresión logística, SVM polinómico, red neuronal, Random Forest y XGBoost, cada uno
+con los hiperparámetros hallados por `GridSearchCV`. Promedia sus probabilidades.
+
+Gana en las dos métricas declaradas: AUC-ROC (0,7954 contra 0,7929 de XGBoost) y
+F1 macro como desempate (0,7205 contra 0,7092). La coherencia entre validación
+cruzada (0,7979) y prueba (0,7954) indica que generaliza bien.
+
+Bagging y boosting combinan muchas copias de un mismo aprendiz; la votación combina
+familias que se equivocan en registros distintos, y por eso supera a los cuatro
+ensambles homogéneos evaluados.
 
 ## Cómo correr la app
 
@@ -64,16 +73,17 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-Las versiones de `scikit-learn` y `xgboost` están fijadas con `==` porque son las que
-serializaron `modelo-clasificacion.pkl`. Con otras versiones el modelo puede fallar al
-cargar o comportarse distinto.
+Las versiones de `scikit-learn`, `xgboost` y `numpy` están fijadas con `==` porque son
+las que serializaron `modelo-clasificacion.pkl`. Con otras versiones el modelo falla al
+cargar: el artefacto es un `VotingClassifier`, y su reconstrucción depende del formato
+interno de cada librería.
 
 ## Archivos
 
 | Archivo | Qué es |
 |---|---|
 | `app.py` | La aplicación Streamlit. Captura los datos en dos bloques y devuelve la predicción. |
-| `modelo-clasificacion.pkl` | Modelo, `LabelEncoder`, nombres de las 247 columnas en orden de entrenamiento y `MinMaxScaler` de la edad. |
+| `modelo-clasificacion.pkl` | Modelo (29 MB: cinco estimadores), `LabelEncoder`, nombres de las 247 columnas en orden de entrenamiento y `MinMaxScaler` de la edad. |
 | `requirements.txt` | Dependencias con versiones fijadas. |
 | El CSV | El dataset original tal como se descargó. |
 
@@ -91,7 +101,7 @@ la app arma su dataframe con `get_dummies(drop_first=False)` y luego hace
 
 Conviene leerlas antes de usar la salida del modelo para cualquier decisión.
 
-**El modelo se equivoca en el 28,5 % de los casos.** La exactitud es del 71,5 %.
+**El modelo se equivoca en el 27,9 % de los casos.** La exactitud es del 72,1 %.
 
 **La variable objetivo está censurada en el tiempo.** La tasa de graduación pasa de
 67,9 % en la convocatoria de 2013 a 0,0 % en las de 2023 y 2024. Quien recibió el
