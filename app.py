@@ -515,7 +515,7 @@ if enviar:
                   "sin medidas adicionales.")
     elif probabilidad >= 0.35:
         clase, banda, acierto = "media", "Zona de incertidumbre", "58 %"
-        accion = ("En esta franja el modelo apenas supera al azar: acierta 56 de cada 100 "
+        accion = ("En esta franja el modelo apenas supera al azar: acierta 58 de cada 100 "
                   "veces, y de las personas que caen aquí se graduó el 52 %. Trate la "
                   "predicción como no concluyente y decida con información que el modelo "
                   "no ve. Es el 38 % de los beneficiarios.")
