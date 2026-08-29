@@ -27,16 +27,42 @@ st.markdown("""
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&display=swap');
 
+  /* Paleta clara por defecto. Los tokens se redefinen abajo para el tema oscuro,
+     de modo que ningun color queda escrito directamente en los componentes. */
   :root {
-      --tinta:    #16232b;
-      --tinta-2:  #4a5b66;
-      --tenue:    #7b8a94;
-      --borde:    #dde4e8;
-      --fondo-2:  #f4f7f8;
-      --acento:   #1d6b73;
-      --ok:       #2f6f4e;
-      --alerta:   #9a6b12;
-      --riesgo:   #a8362b;
+      --tinta:      #16232b;
+      --tinta-2:    #4a5b66;
+      --tenue:      #7b8a94;
+      --borde:      #dde4e8;
+      --superficie: #ffffff;
+      --panel:      #f4f7f8;
+      --acento:     #1d6b73;
+      --acento-2:   #17565c;
+      --ok:         #2f6f4e;
+      --alerta:     #9a6b12;
+      --riesgo:     #a8362b;
+      --pista-alta: #d9a49d;
+      --pista-med:  #e2c98c;
+      --pista-baja: #8fbfa4;
+  }
+
+  @media (prefers-color-scheme: dark) {
+      :root {
+          --tinta:      #e8edf0;
+          --tinta-2:    #b3c0c8;
+          --tenue:      #8b99a3;
+          --borde:      #2d3b44;
+          --superficie: #18222a;
+          --panel:      #141d24;
+          --acento:     #6fb3ba;
+          --acento-2:   #8ac7cd;
+          --ok:         #68b78c;
+          --alerta:     #d5a64a;
+          --riesgo:     #e08076;
+          --pista-alta: #5d3833;
+          --pista-med:  #5a4a24;
+          --pista-baja: #2c4d3c;
+      }
   }
 
   html, body, [class*="css"] { font-family: 'Source Sans 3', system-ui, sans-serif; }
@@ -60,23 +86,32 @@ st.markdown("""
   }
 
   .tarjeta {
-      border: 1px solid var(--borde); border-radius: 4px; background: #fff;
+      border: 1px solid var(--borde); border-radius: 4px; background: var(--superficie);
       padding: 1.6rem 1.8rem; margin-top: .5rem;
   }
-  .tarjeta.baja   { border-left: 4px solid var(--ok); }
-  .tarjeta.media  { border-left: 4px solid var(--alerta); }
-  .tarjeta.alta   { border-left: 4px solid var(--riesgo); }
+  .tarjeta.baja  { border-left: 4px solid var(--ok); }
+  .tarjeta.media { border-left: 4px solid var(--alerta); }
+  .tarjeta.alta  { border-left: 4px solid var(--riesgo); }
 
-  .cifra { font-size: 3.4rem; font-weight: 700; line-height: 1; letter-spacing: -.02em; }
-  .cifra.baja { color: var(--ok); } .cifra.media { color: var(--alerta); } .cifra.alta { color: var(--riesgo); }
-  .cifra-pie { color: var(--tenue); font-size: .85rem; margin-top: .3rem; }
+  .veredicto { font-size: 2.6rem; font-weight: 700; line-height: 1.05; letter-spacing: -.02em; }
+  .veredicto.baja { color: var(--ok); } .veredicto.media { color: var(--alerta); } .veredicto.alta { color: var(--riesgo); }
+  .veredicto-pie { color: var(--tinta-2); font-size: 1rem; margin-top: .45rem; }
+  .veredicto-pie b { color: var(--tinta); }
 
-  .banda { font-size: 1.05rem; font-weight: 700; color: var(--tinta); margin-bottom: .3rem; }
+  .confianza {
+      display: inline-block; margin-top: .9rem; padding: .3rem .7rem; border-radius: 3px;
+      background: var(--panel); border: 1px solid var(--borde);
+      color: var(--tinta-2); font-size: .87rem;
+  }
+  .confianza b { color: var(--tinta); }
+
   .accion { color: var(--tinta-2); font-size: .97rem; line-height: 1.55; }
 
   .pista { position: relative; height: 10px; border-radius: 5px; margin: 1.4rem 0 .5rem;
            background: linear-gradient(to right,
-              #d9a49d 0%, #d9a49d 35%, #e2c98c 35%, #e2c98c 65%, #8fbfa4 65%, #8fbfa4 100%); }
+              var(--pista-alta) 0%, var(--pista-alta) 35%,
+              var(--pista-med) 35%, var(--pista-med) 65%,
+              var(--pista-baja) 65%, var(--pista-baja) 100%); }
   .marca { position: absolute; top: -5px; width: 3px; height: 20px;
            background: var(--tinta); border-radius: 2px; }
   .escala { display: flex; justify-content: space-between; font-size: .73rem; color: var(--tenue); }
@@ -89,8 +124,8 @@ st.markdown("""
       background: var(--acento); color: #fff; border: none; font-weight: 600;
       padding: .6rem 0; border-radius: 3px;
   }
-  div[data-testid="stFormSubmitButton"] button:hover { background: #17565c; color: #fff; }
-  section[data-testid="stSidebar"] { background: var(--fondo-2); border-right: 1px solid var(--borde); }
+  div[data-testid="stFormSubmitButton"] button:hover { background: var(--acento-2); color: #fff; }
+  section[data-testid="stSidebar"] { border-right: 1px solid var(--borde); }
 </style>
 """, unsafe_allow_html=True)
 
@@ -376,7 +411,7 @@ with st.sidebar:
 # --------------------------------------------------------------- cabecera
 st.markdown("""
 <div class="cabecera">
-  <div class="sobre">Minería de datos · UPB 2026</div>
+  <div class="sobre">Aprendizaje de máquinas</div>
   <h1>Riesgo de no graduación en beneficiarios de apoyos económicos</h1>
   <p>Estima la probabilidad de que un beneficiario de beca o crédito condonable
      en Antioquia culmine su programa académico, para priorizar acompañamiento
@@ -462,34 +497,45 @@ if enviar:
 
     probabilidad = float(modelo.predict_proba(data_preparada)[0, 1])
     porcentaje = probabilidad * 100
+    se_gradua = bool(modelo.predict(data_preparada)[0])
 
+    # La confianza no es la misma en todo el rango. Medido sobre los 4.366 registros
+    # del conjunto de prueba, el modelo acierta el 85 % por debajo de 0,35 y el 76 %
+    # por encima de 0,65, pero solo el 56 % en la franja intermedia, donde de hecho
+    # se graduo el 51 % de los casos: ahi su prediccion no es informativa.
     if probabilidad >= 0.65:
-        clase, banda = "baja", "Riesgo bajo"
+        clase, banda, acierto = "baja", "Riesgo bajo", "76 %"
         accion = ("El perfil se parece al de quienes culminaron. Seguimiento estándar, "
                   "sin medidas adicionales.")
     elif probabilidad >= 0.35:
-        clase, banda = "media", "Zona de incertidumbre"
-        accion = ("El modelo no discrimina bien en este rango: su predicción aquí es poco "
-                  "informativa. Conviene decidir con criterio humano y con información "
-                  "que el modelo no ve.")
+        clase, banda, acierto = "media", "Zona de incertidumbre", "56 %"
+        accion = ("En esta franja el modelo apenas supera al azar: acierta 56 de cada 100 "
+                  "veces, y de las personas que caen aquí se graduó el 51 %. Trate la "
+                  "predicción como no concluyente y decida con información que el modelo "
+                  "no ve. Es el 38 % de los beneficiarios.")
     else:
-        clase, banda = "alta", "Riesgo alto"
+        clase, banda, acierto = "alta", "Riesgo alto", "85 %"
         accion = ("El perfil se parece al de quienes no culminaron. Priorizar acompañamiento "
                   "académico y seguimiento desde el primer semestre.")
 
+    veredicto = "SÍ se gradúa" if se_gradua else "NO se gradúa"
+
     st.markdown(f"""
     <div class="tarjeta {clase}">
-      <div class="banda">{banda}</div>
-      <div class="cifra {clase}">{porcentaje:.1f} %</div>
-      <div class="cifra-pie">probabilidad estimada de culminar el programa</div>
+      <div class="veredicto {clase}">{veredicto}</div>
+      <div class="veredicto-pie">Probabilidad estimada de culminar el programa:
+        <b>{porcentaje:.1f} %</b> &nbsp;·&nbsp; {banda}</div>
+      <div class="confianza">En este rango el modelo acierta el <b>{acierto}</b> de las veces</div>
       <div class="pista"><div class="marca" style="left: calc({porcentaje:.1f}% - 1.5px);"></div></div>
       <div class="escala"><span>0 % · riesgo alto</span><span>35 %</span><span>65 %</span><span>riesgo bajo · 100 %</span></div>
       <div class="accion" style="margin-top:1.1rem;">{accion}</div>
-      <div class="aviso">El modelo acierta en el 72,1 % de los casos. Esta estimación
-        orienta la priorización de acompañamiento; no debe usarse para negar,
-        condicionar o retirar un beneficio.</div>
+      <div class="aviso">El modelo acierta en el 72,1 % de los casos en promedio, pero esa
+        cifra esconde tres regímenes distintos: 85 % por debajo de 0,35, 56 % entre 0,35 y
+        0,65, y 76 % por encima. Esta estimación orienta la priorización de acompañamiento;
+        no debe usarse para negar, condicionar o retirar un beneficio.</div>
     </div>
     """, unsafe_allow_html=True)
+
 
 else:
     st.info("Complete el perfil y pulse **Calcular probabilidad**.")
