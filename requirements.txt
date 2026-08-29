@@ -1,0 +1,16 @@
+# requirements.txt -> va en la RAIZ del repositorio de GitHub
+#
+# scikit-learn y xgboost estan fijados con == porque son las versiones que
+# serializaron modelo-clasificacion.pkl. Se leyeron del propio archivo:
+#   scikit-learn -> atributo _sklearn_version del MinMaxScaler y el LabelEncoder
+#   xgboost      -> campo "version" [3, 2, 0] del booster
+# Con otras versiones el pickle puede no cargar o cargar con otro comportamiento.
+#
+# numpy va con rango porque el pickle usa rutas numpy._core, que solo existen
+# desde numpy 2.0. pandas y streamlit no intervienen en la serializacion.
+
+streamlit
+scikit-learn==1.6.1
+xgboost==3.2.0
+numpy>=2.0,<3.0
+pandas>=2.2
