@@ -387,9 +387,12 @@ with st.sidebar:
 
     with st.expander("Cómo leer el resultado"):
         st.markdown(
-            "El modelo devuelve una **probabilidad**, no una sentencia. Se equivoca "
-            "en el 27,9 % de los casos, así que sirve para **priorizar acompañamiento**, "
-            "no para negar, condicionar o retirar un beneficio."
+            "El resultado trae el veredicto y la probabilidad que lo sustenta. La "
+            "confianza **no es la misma en todo el rango**: medido sobre el conjunto de "
+            "prueba, el modelo acierta el 84 % cuando estima menos de 0,35 y el 78 % "
+            "cuando estima más de 0,65, pero solo el **58 %** en la franja intermedia, "
+            "donde cae el 38 % de los casos. Por eso sirve para **priorizar "
+            "acompañamiento**, no para negar, condicionar o retirar un beneficio."
         )
 
     with st.expander("Limitaciones"):
@@ -433,7 +436,10 @@ with st.form("prediccion"):
         etnia = st.selectbox('Grupo étnico', v_etnia,
                              help="Autorreconocimiento étnico declarado en la inscripción.")
         victima = st.selectbox('¿Es víctima del conflicto armado?', v_victima)
+        # El modelo espera el booleano original (la columna entrenada es
+        # movilidad_territorial_True); format_func solo cambia lo que ve el usuario.
         movilidad = st.selectbox('¿Reside fuera de su departamento de nacimiento?', v_movilidad,
+                                 format_func=lambda x: 'SÍ' if x else 'NO',
                                  help="Movilidad territorial: indica desarraigo respecto del "
                                       "departamento de origen.")
         subregiones = st.selectbox('Subregión de residencia', v_subregiones,
@@ -500,21 +506,21 @@ if enviar:
     se_gradua = bool(modelo.predict(data_preparada)[0])
 
     # La confianza no es la misma en todo el rango. Medido sobre los 4.366 registros
-    # del conjunto de prueba, el modelo acierta el 85 % por debajo de 0,35 y el 76 %
-    # por encima de 0,65, pero solo el 56 % en la franja intermedia, donde de hecho
-    # se graduo el 51 % de los casos: ahi su prediccion no es informativa.
+    # del conjunto de prueba, el modelo acierta el 84 % por debajo de 0,35 y el 78 %
+    # por encima de 0,65, pero solo el 58 % en la franja intermedia, donde de hecho
+    # se graduo el 52 % de los casos: ahi su prediccion no es informativa.
     if probabilidad >= 0.65:
-        clase, banda, acierto = "baja", "Riesgo bajo", "76 %"
+        clase, banda, acierto = "baja", "Riesgo bajo", "78 %"
         accion = ("El perfil se parece al de quienes culminaron. Seguimiento estándar, "
                   "sin medidas adicionales.")
     elif probabilidad >= 0.35:
-        clase, banda, acierto = "media", "Zona de incertidumbre", "56 %"
+        clase, banda, acierto = "media", "Zona de incertidumbre", "58 %"
         accion = ("En esta franja el modelo apenas supera al azar: acierta 56 de cada 100 "
-                  "veces, y de las personas que caen aquí se graduó el 51 %. Trate la "
+                  "veces, y de las personas que caen aquí se graduó el 52 %. Trate la "
                   "predicción como no concluyente y decida con información que el modelo "
                   "no ve. Es el 38 % de los beneficiarios.")
     else:
-        clase, banda, acierto = "alta", "Riesgo alto", "85 %"
+        clase, banda, acierto = "alta", "Riesgo alto", "84 %"
         accion = ("El perfil se parece al de quienes no culminaron. Priorizar acompañamiento "
                   "académico y seguimiento desde el primer semestre.")
 
@@ -530,8 +536,8 @@ if enviar:
       <div class="escala"><span>0 % · riesgo alto</span><span>35 %</span><span>65 %</span><span>riesgo bajo · 100 %</span></div>
       <div class="accion" style="margin-top:1.1rem;">{accion}</div>
       <div class="aviso">El modelo acierta en el 72,1 % de los casos en promedio, pero esa
-        cifra esconde tres regímenes distintos: 85 % por debajo de 0,35, 56 % entre 0,35 y
-        0,65, y 76 % por encima. Esta estimación orienta la priorización de acompañamiento;
+        cifra esconde tres regímenes distintos: 84 % por debajo de 0,35, 58 % entre 0,35 y
+        0,65, y 78 % por encima. Esta estimación orienta la priorización de acompañamiento;
         no debe usarse para negar, condicionar o retirar un beneficio.</div>
     </div>
     """, unsafe_allow_html=True)
